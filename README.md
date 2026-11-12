@@ -42,7 +42,27 @@ uv run python scripts/make_sample_pdf.py   # creates data/sample_report.pdf
 - **ANTHROPIC_API_KEY**: Claude Opus 5.5 writes image descriptions and table summaries, and runs the agent. Get one at console.anthropic.com.
 - **OPENAI_API_KEY**: `text-embedding-3-small` for embeddings (the same model ad-engine uses).
 
-## Run it
+## Quick start: upload a PDF in the chatbot
+
+1. Start the chatbot and leave the terminal running (Ctrl+C stops it):
+   ```bash
+   uv run streamlit run app.py
+   ```
+   Your browser opens http://localhost:8501. If it doesn't, open that address yourself.
+2. Click the **+** at the left of the chat box, choose one or more PDFs, and press Enter. You can
+   type a question in the same message.
+3. Watch the status box tick off each stage: parsing, chunking, Claude descriptions, embedding
+   and storing. When it's done, you get a summary of the chunks added.
+4. Ask questions. Under each answer, **🔎 sources** shows the searches the agent ran, the matching
+   chunks and any images.
+
+The sidebar (**»** at the top left) lists the indexed PDFs (🗑 removes one), switches Claude image
+and table descriptions on or off, and starts a new conversation. How the chatbot works is
+explained in [Chatbot (LangGraph + Streamlit)](#chatbot-langgraph--streamlit) below.
+
+## Command line
+
+Everything the chatbot does is also available as commands, which make each stage easier to study:
 
 ```bash
 uv run python -m raglab parse  data/sample_report.pdf           # stage 1 only, no API calls
