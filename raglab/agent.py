@@ -57,6 +57,11 @@ TOOLS = [
 
 
 def run_search_tool(args: dict, verbose: bool) -> list[dict]:
+    return search_tool_blocks(args, verbose)[0]
+
+
+def search_tool_blocks(args: dict, verbose: bool = False):
+    """Run a search and build the tool_result content. Returns (blocks, hits)."""
     k = max(1, min(10, args.get("k") or config.DEFAULT_TOP_K))
     hits = search(args["query"], k=k, types=args.get("content_types"))
     if verbose:
@@ -64,7 +69,7 @@ def run_search_tool(args: dict, verbose: bool) -> list[dict]:
         for h in hits:
             print(f"     {h.score:.3f}  {h.type:<5}  {h.citation:<22}  {h.section[:40]}")
     if not hits:
-        return [{"type": "text", "text": "No results."}]
+        return [{"type": "text", "text": "No results."}], hits
 
     blocks: list[dict] = []
     for i, h in enumerate(hits, 1):
@@ -76,7 +81,7 @@ def run_search_tool(args: dict, verbose: bool) -> list[dict]:
         blocks.append({"type": "text", "text": f"{header}\n{body}"})
         if h.type == "image" and h.image_path:
             blocks.append(llm.image_block(h.image_path))  # Claude sees the actual figure
-    return blocks
+    return blocks, hits
 
 
 class RagAgent:

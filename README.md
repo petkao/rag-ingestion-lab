@@ -60,6 +60,66 @@ live in the same index; each chunk records its `source`.
 After ingesting, open **`output/<pdf-name>/report.html`** in a browser. It shows every chunk
 exactly as it was embedded, with images inline. Most retrieval bugs are visible there.
 
+## Chatbot (LangGraph + Streamlit)
+
+```bash
+uv run streamlit run app.py
+```
+
+This opens http://localhost:8501. Attach one or more PDFs with the **+** in the chat box (you can
+type a question in the same message), and the chatbot ingests them into the vector database with
+live progress for each stage. Then ask questions. Each answer has a **sources** panel showing every
+search the agent ran, the hits with their scores, and any retrieved images. The sidebar lists the
+indexed PDFs (🗑 removes one), switches Claude enrichment on or off for the next upload, and
+starts a new conversation.
+
+The whole chatbot is one LangGraph graph ([raglab/graphs/chat_graph.py](raglab/graphs/chat_graph.py)).
+The ingestion pipeline is a second graph ([raglab/graphs/ingest_graph.py](raglab/graphs/ingest_graph.py))
+that runs inside it as a subgraph:
+
+```mermaid
+flowchart TD
+    START(["START"]) --> ROUTE{"route<br/>(conditional entry)"}
+    ROUTE -- "PDF attached<br/>pending_pdf is set" --> ING
+    ROUTE -- "chat message" --> AG["agent<br/>one Claude call"]
+
+    subgraph ING["ingest_graph"]
+        P["parse"] -- "nothing found<br/>(e.g. scanned PDF)" --> PX(["END"])
+        P --> C["chunk"] --> E["enrich"] --> S["store"]
+    end
+
+    S --> ACK["add “I've added X…” to the<br/>conversation, clear pending_pdf"] --> END1(["END"])
+    AG -- "tool_use" --> T["tools<br/>search_document · list_documents"]
+    T -- "tool_result<br/>(text, tables, images)" --> AG
+    AG -- "final answer" --> END2(["END"])
+```
+
+What each LangGraph feature does here:
+
+| LangGraph feature | Where | What it gives you |
+|---|---|---|
+| `StateGraph` + `TypedDict` state | both graphs | Each node returns only the keys it changes. `messages` and `events` use an `operator.add` reducer, so nodes append to them rather than overwrite. |
+| Conditional entry (`add_conditional_edges(START, route, …)`) | chat graph | The same conversation thread handles "here's a PDF" and "answer this question". |
+| Conditional edge loop (`agent → tools → agent`) | chat graph | The tool-use loop from `agent.py`, with each step as a separate, inspectable node. |
+| Subgraph | `ingest` node calls `ingest_graph` | `graph.stream(..., subgraphs=True)` sends parse/chunk/enrich/store progress to the UI as it happens. |
+| Checkpointer (`InMemorySaver`) + `thread_id` | chat graph | Conversation memory: every turn is saved per thread, and **New conversation** just starts a new `thread_id`. Swap in `SqliteSaver` or `PostgresSaver` to keep chats across restarts. |
+
+Messages in the state are kept in the Anthropic API's own format (role + content blocks), so they
+go back to Claude unchanged, including thinking blocks. The model calls use the Anthropic SDK
+directly from inside the nodes, so no LangChain model wrapper is needed.
+
+You can also drive the graph without the UI:
+
+```python
+from raglab.graphs.chat_graph import build_chat_graph
+
+graph = build_chat_graph()
+cfg = {"configurable": {"thread_id": "demo"}}
+graph.invoke({"pending_pdf": "data/sample_report.pdf", "use_llm": True}, cfg)   # ingest
+out = graph.invoke({"messages": [{"role": "user", "content": "Where is the roastery?"}]}, cfg)
+print(out["messages"][-1]["content"][-1]["text"])
+```
+
 ## What each stage does, and why
 
 Each stage writes its result to `output/<pdf-name>/`, so you can open the JSON between stages.
@@ -329,8 +389,12 @@ rag-ingestion-lab/
 │   ├── agent.py       tool-using RAG agent
 │   ├── evaluate.py    hit@k / MRR
 │   ├── report.py      HTML inspection report
-│   └── __main__.py    CLI
+│   ├── __main__.py    CLI
+│   └── graphs/
+│       ├── ingest_graph.py   LangGraph: parse → chunk → enrich → store
+│       └── chat_graph.py     LangGraph: route → ingest | agent ⇄ tools, with memory
+├── app.py             Streamlit chatbot (PDF upload + chat)
 ├── scripts/make_sample_pdf.py
-├── data/              PDFs + eval_questions.json
+├── data/              PDFs + eval_questions.json (chat uploads go to data/uploads/, gitignored)
 └── output/            everything generated (gitignored)
 ```

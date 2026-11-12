@@ -44,6 +44,22 @@ def collection():
     )
 
 
+def list_documents() -> list[dict]:
+    """One entry per ingested PDF, with chunk counts by type."""
+    metas = collection().get(include=["metadatas"])["metadatas"]
+    docs: dict[str, dict] = {}
+    for m in metas:
+        d = docs.setdefault(m["source"], {"source": m["source"], "text": 0, "table": 0, "image": 0,
+                                          "pages": 0})
+        d[m["type"]] += 1
+        d["pages"] = max(d["pages"], m["page_end"])
+    return sorted(docs.values(), key=lambda d: d["source"])
+
+
+def delete_document(source: str) -> None:
+    collection().delete(where={"source": source})
+
+
 def store_chunks(chunks: list[Chunk]) -> int:
     if not chunks:
         return 0
