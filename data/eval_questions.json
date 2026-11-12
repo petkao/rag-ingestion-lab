@@ -1,0 +1,13 @@
+[
+  {"question": "Who is the CEO of Helios?", "expect_type": "text", "expect_page": 1, "answer": "Mariana Okafor"},
+  {"question": "How many new stores will open in 2026?", "expect_type": "text", "expect_page": 1, "answer": "30"},
+  {"question": "How many members does the subscription program have?", "expect_type": "text", "expect_page": 1, "answer": "61,000"},
+  {"question": "What was Pacific Northwest revenue in Q3?", "expect_type": "table", "expect_page": 2, "answer": "$19.6M"},
+  {"question": "Which region had the smallest full-year revenue?", "expect_type": "table", "expect_page": 2, "answer": "Mountain, $30.6M"},
+  {"question": "Which store format has the lowest customer satisfaction?", "expect_type": "image", "expect_page": 2, "answer": "Kiosk, 64"},
+  {"question": "How satisfied are drive-thru customers?", "expect_type": "image", "expect_page": 2, "answer": "71"},
+  {"question": "In which city is the roastery located?", "expect_type": "image", "expect_page": 3, "answer": "Boise, Idaho"},
+  {"question": "Where are green beans warehoused before roasting?", "expect_type": "image", "expect_page": 3, "answer": "Oakland, CA"},
+  {"question": "What share of Ethiopian coffee is fair-trade certified?", "expect_type": "table", "expect_page": 3, "answer": "92%"},
+  {"question": "How much did roastery emissions fall?", "expect_type": "text", "expect_page": 3, "answer": "18%"}
+]

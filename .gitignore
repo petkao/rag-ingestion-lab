@@ -1,0 +1,5 @@
+.venv/
+.env
+output/
+data/_figures/
+__pycache__/
